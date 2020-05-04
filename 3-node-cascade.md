@@ -35,7 +35,7 @@ Thus, the write operation on Node1 is replicated for all nodes.
 
 All the write operation on Node1 wait for the completion of the send operation on Node 2, and it causes **performance degrade** of the operation.
 If the communication between Node2 and Node3 is **suspended**, the write operation which is replicated from Node1 to Node2 are recorded as *DIRTY WRITE for Node3* on the bitmap in *drbd0* of Node2 .
-The remaining *DIRTY WRITE*s are replicated to Node3 on **resume** of the communication. Node2 can be thought as write cache for Node3.  
+The remaining *DIRTY WRITE*s are replicated to Node3 on **resume** of the communication. **Node2 can be thought as write cache of Node3.**  
 *cron* is utilized to controll connect and disconnect of the communication and enables periodic resyncing.
 
 ## Software versions
@@ -163,7 +163,7 @@ On all nodes, do as follows.
    ```
    Confirm the completion of the initialization.
    ```sh
-   drbdadm status
+   # drbdadm status
    ```
 
 1. On Node1, create a file system.
@@ -225,7 +225,7 @@ sv11	drbdadm discon > con > verify	NG!
    ```
 
 1. On node3, check if read/write is possible consystently.
-   ```
+   ```sh
    # mount /dev/drbd1 /mnt
    # cat /mnt/hostnames
    sv11

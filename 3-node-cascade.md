@@ -110,59 +110,30 @@ On all nodes, do as follows.
    |Node2 | sv12      | 192.168.137.12|
    |Node3 | sv13      | 192.168.137.13|
 
-1. Initialize the metadata storage.
-
-   At first Node2 and 3
+1. On Node2 and 3, Initialize the metadata storage, then start the resource *mdL*.
+   
    ```sh
    # drbdadm create-md mdL
-   ```
-
-   Then Node2
-   ```sh
-   # drbdadm create-md --stacked md
-   ```
-
-   Then Node1
-   ```sh
-   # drbdadm create-md md
-   ```
-
-<!--
-1. Enable and start the DRBD service.
-   ```sh
-   # systemctl enable drbd
-   # systemctl start drbd
-   ```
--->
-
-#### Initial replication
-
-1. On Node2 and 3,
-   ```sh
    # drbdadm up mdL
    ```
 
-1. On Node2, Initialize the DRBD resource *md*.
+1. On Node2, Initialize the resource *mdL*, then confirm the completion of the initialization.
    ```sh
    # drbdadm primary --force mdL
-   ```
-   Confirm the completion of the initialization.
-   ```sh
    # drbdadm status
    ```
 
-1. On Node2,
+1. On Node2, create then start the stacked resource *md*.
    ```sh
-   # drbdadm up --stacked mds
+   # drbdadm create-md --stacked md
+   # drbdadm up --stacked md
    ```
 
-1. On Node1,
+1. On Node1, create, start, initialize the resource *md*, then confirm the completion of the initialization.
    ```sh
-   # drbdadm up mds
-   # drbdadm primary --force mds
-   ```
-   Confirm the completion of the initialization.
-   ```sh
+   # drbdadm create-md md
+   # drbdadm up md
+   # drbdadm primary --force md
    # drbdadm status
    ```
 

@@ -213,10 +213,10 @@ sv11	drbdadm discon > con > verify	NG!
    # umount /mnt
    ```
 
-1. On Node2, start the stacked device.
+1. On Node2, start the stacked device and make it primary (by mount).
    ```
    # drbdadm up --stacked md
-   # drbdadm primary --stacked md
+   # mount /dev/drbd10 /mnt
    ```
 
 1. On Node1, recover consistency.
@@ -228,7 +228,9 @@ sv11	drbdadm discon > con > verify	NG!
    ```
    # drbdadm up md
    ```
-
+   **NOTE: The operation here need to be reboot.**  
+   **[ down > up ] and [ disconnect > connect ] could not help the recovery**
+   
 1. On Node2, unmount the device (resoruce md).
    ```
    # umount /mnt
@@ -239,14 +241,22 @@ sv11	drbdadm discon > con > verify	NG!
    # mount /dev/drbd10 /mnt
    ```
 
-1. Optionally, verify the consistency.
+## Other operations
+
+- Verifing the consistency.
    ```
    # drbdadm verify md
    # tail -f /var/log/messages
    ```
 
+- Forcibly recovering the data, issue the command on sync target node
+   ```
+   # drbdadm invalidate md
+   ```
+
 ---
-**NOTE**: The downtime required for failback cannot be guaranteed to be sufficiently short, as the length of time required to transfer the difference from Node2 to Node1 is indefinite.
+## NOTE
+The downtime required for failback cannot be guaranteed to be sufficiently short, as the length of time required to transfer the difference from Node2 to Node1 is indefinite.
 
 ---
 

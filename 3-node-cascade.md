@@ -178,7 +178,10 @@ sv11	drbdadm discon > con > verify	NG!
 	mount /dev/drvd10 /mnt
 -->
 
-#### Failover from Node1 to Node3
+#### Failover and Failback
+
+Failover from Node1 to Node3
+
 1. On Node1, check if read/write is possible.
    ```sh
    # mount /dev/drbd10 /mnt
@@ -206,7 +209,7 @@ sv11	drbdadm discon > con > verify	NG!
    sv13
    ```
 
-#### Failback from Node3 to Node1
+Failback from Node3 to Node1
 
 1. On node3, unmount the device.
    ```
@@ -240,6 +243,22 @@ sv11	drbdadm discon > con > verify	NG!
    ```
    # mount /dev/drbd10 /mnt
    ```
+
+## Testing operation for failure on Relay node
+```
+sv2#	shutdown
+
+sv3#	mount /dev/drbd1 /mnt
+sv3#	# write operation
+
+sv2#	# boot operation
+
+sv3#	umount /mnt
+
+sv2#	drbdadm up mdL			# recovery sv2 <- sv3
+					# wait for completion of the recovery
+sv2#	drbdadm up --stacked r1		# recovery sv1 -> sv2
+```
 
 ## Other operations
 

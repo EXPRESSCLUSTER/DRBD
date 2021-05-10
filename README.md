@@ -8,7 +8,9 @@ with EXPRESSCLUSTER.
   - [English](doc/2-node-cluster.md)
 ### 3-node Cluster
 - 1:2 Replication
-  - [English](doc/3-node-cluster_EN.md)
+  - English
+    - [CentOS](doc/3-node-cluster_EN.md)
+    - [Ubuntu](doc/3-node-cluster-ubuntu_EN.md)
   - [Japanese](doc/3-node-cluster_JP.md)
 - Cascade Replication
   - [English](doc/3-node-cascade.md)

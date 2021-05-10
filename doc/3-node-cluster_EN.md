@@ -33,7 +33,7 @@ the protocol C. The cross-site data replication is performed in the protocol A.
 
 ### Software versions
 
-- Redhat Enterprise Linux 7.5
+- Red Hat Enterprise Linux 7.5
 - EXPRESSCLUSTER X 3.3.5 / 4.0.0
 - DRBD 9.0
 

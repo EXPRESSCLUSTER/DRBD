@@ -5,15 +5,18 @@ with EXPRESSCLUSTER.
 ## Clustering
 ### 2-node Cluster
 - 1:1 Replication
-  - [English](doc/2-node-cluster.md)
+  - CentOS
+    - [English](doc/2-node-cluster.md)
 ### 3-node Cluster
 - 1:2 Replication
-  - English
-    - [CentOS](doc/3-node-cluster_EN.md)
-    - [Ubuntu](doc/3-node-cluster-ubuntu_EN.md)
-  - [Japanese](doc/3-node-cluster_JP.md)
+  - Red Hat
+    - [English](doc/3-node-cluster_EN.md)
+    - [Japanese](doc/3-node-cluster_JP.md)
+  - Ubuntu
+    - [English](doc/3-node-cluster-ubuntu_EN.md)
 - Cascade Replication
-  - [English](doc/3-node-cascade.md)
+  - CentOS
+    - [English](doc/3-node-cascade.md)
 
 ## Code Reading
 ### DRBD (kernel module)

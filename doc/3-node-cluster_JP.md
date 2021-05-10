@@ -31,7 +31,7 @@ CLUSTERPRO X の詳細については、[こちら](https://jpn.nec.com/clusterp
 
 ### 使用ソフトウェア
 
-- Redhat Enterprise Linux 7.5
+- Red Hat Enterprise Linux 7.5
 - CLUSTERPRO X 3.3.5 / 4.0.0
 - DRBD 9.0
 

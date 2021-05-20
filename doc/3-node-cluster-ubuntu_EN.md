@@ -7,6 +7,7 @@
 - [Installing DRBD](#installing-drbd)
 - [Configuring DRBD](#configuring-drbd)
 - [Verifying Replication](#verifying-replication)
+
 ## Software
 - Ubuntu 20.04.2 LTS (5.4.0-72-generic)
 - DRBD 9
@@ -78,55 +79,33 @@
 - Do the following steps on **each node**.
   1. Install software-properties-common.
      ```sh
-     $ sudo apt-get install software-properties-common
+     sudo apt-get install software-properties-common
      ```
   1. Add LINBIT repository.
      ```sh
-     $ sudo add-apt-repository ppa:linbit/linbit-drbd9-stack
+     sudo add-apt-repository ppa:linbit/linbit-drbd9-stack
      ```
      - If you have a proxy server, run the following command.
        ```sh
-       $ sudo https_proxy=<your proxy server address> add-apt-repository ppa:linbit/linbit-drbd9-stack
-        This PPA contains DRBD9, drbd-utils, LINSTOR (client, python API, server).
-       
-       This differs from official, production grade LINBIT repositories in several ways, including:
-       - We push RCs immediately to the PPA
-       - We don't push hotfixes, these usually have to wait until the next RC/release
-       - We only keep 2 LTS versions up to date (Bionic and Focal, but not Xenial)
-       
-       For support and access to official repositories see:
-       https://www.linbit.com or write an email to: sales AT linbit.com
-        More info: https://launchpad.net/~linbit/+archive/ubuntu/linbit-drbd9-stack
-       Press [ENTER] to continue or Ctrl-c to cancel adding it.
-       
-       Hit:1 http://jp.archive.ubuntu.com/ubuntu focal InRelease
-       Hit:2 http://jp.archive.ubuntu.com/ubuntu focal-updates InRelease
-       Hit:3 http://jp.archive.ubuntu.com/ubuntu focal-backports InRelease
-       Hit:4 http://security.ubuntu.com/ubuntu focal-security InRelease
-       Get:5 http://ppa.launchpad.net/linbit/linbit-drbd9-stack/ubuntu focal InRelease [24.4 kB]
-       Get:6 http://ppa.launchpad.net/linbit/linbit-drbd9-stack/ubuntu focal/main i386 Packages [1,608 B]
-       Get:7 http://ppa.launchpad.net/linbit/linbit-drbd9-stack/ubuntu focal/main amd64 Packages [2,352 B]
-       Get:8 http://ppa.launchpad.net/linbit/linbit-drbd9-stack/ubuntu focal/main Translation-en [1,308 B]
-       Fetched 29.6 kB in 4s (8,023 B/s)
-       Reading package lists... Done  
+       sudo https_proxy=<your proxy server address> add-apt-repository ppa:linbit/linbit-drbd9-stack
        ```
   1. Update the repository.
      ```sh
-     $ sudo apt update
+     sudo apt update
      ```     
   1. Install DRBD.
      ```sh
-     $ sudo apt install drbd-utils drbd-dkms
+     sudo apt install drbd-utils drbd-dkms
      ```
   1. 
      ```sh
-     $ sudo dpkg -l |grep drbd
+     sudo dpkg -l |grep drbd
      ii  drbd-dkms                            9.0.29-1ppa1~focal1               all          RAID 1 over TCP/IP for Linux module source
      ii  drbd-utils                           9.17.0-1ppa1~focal1               amd64        RAID 1 over TCP/IP for Linux (user utilities)
      ```
 ## Configuring DRBD
 - Do the following steps on **each node**.
-  1. Create [resource name].res file (e.g. r0.res) as below.
+  1. Move to /etc/drbd.d and create [resource name].res file (e.g. r0.res) as below.
      ```
      resource r0 {
          device /dev/drbd0;
@@ -170,47 +149,47 @@
      ```
   1. Initialize DRBD's metadata.
      ```sh
-     $ sudo drbdadm create-md r0
+     sudo drbdadm create-md r0
      ```
   1. Enable DRBD service.
      ```sh
-     $ sudo systemctl enable drbd
-     $ sudo systemctl start drbd
+     sudo systemctl enable drbd
+     sudo systemctl start drbd
      ```
 ## Verifying Replication
 1. On node1, do the following steps.
    ```sh
-   $ sudo drbdadm primary --force r0
-   $ sudo mkfs -t ext4 /dev/drbd0
-   $ sudo mkdir /mnt/drbd0
-   $ sudo mount /dev/drbd0 /mnt/drbd0
-   $ sudo hostname >> /mnt/drbd0/hostnames
-   $ sudo cat /mnt/drbd0/hostnames
+   sudo drbdadm primary --force r0
+   sudo mkfs -t ext4 /dev/drbd0
+   sudo mkdir /mnt/drbd0
+   sudo mount /dev/drbd0 /mnt/drbd0
+   sudo hostname >> /mnt/drbd0/hostnames
+   sudo cat /mnt/drbd0/hostnames
    node1
-   $ sudo umount /mnt/drbd0
-   $ sudo drbdadm secondary r0
+   sudo umount /mnt/drbd0
+   sudo drbdadm secondary r0
    ```
 1. On node2, do the following steps.
    ```sh
-   $ sudo mkdir /mnt/drbd0
-   $ sudo mount /dev/drbd0 /mnt/drbd0
-   $ sudo hostname >> /mnt/drbd0/hostnamesrun the
-   $ sudo cat /mnt/drbd0/hostnames
-   $ sudo drbdadm status r0
+   sudo mkdir /mnt/drbd0
+   sudo mount /dev/drbd0 /mnt/drbd0
+   sudo hostname >> /mnt/drbd0/hostnamesrun the
+   sudo cat /mnt/drbd0/hostnames
+   sudo drbdadm status r0
    node1
    node2
-   $ sudo umount /mnt/drbd0
+   sudo umount /mnt/drbd0
    ```
 1. On node3, do the following steps.
    ```sh
-   $ sudo mkdir /mnt/drbd0
-   $ sudo mount /dev/drbd0 /mnt/drbd0
-   $ sudo hostname >> /mnt/drbd0/hostnames
-   $ sudo cat /mnt/drbd0/hostnames
+   sudo mkdir /mnt/drbd0
+   sudo mount /dev/drbd0 /mnt/drbd0
+   sudo hostname >> /mnt/drbd0/hostnames
+   sudo cat /mnt/drbd0/hostnames
    node1
    node2
    node3
-   $ sudo umount /mnt/drbd0
+   sudo umount /mnt/drbd0
    ```
 1. On node1, run the following command to set primary node for node1.
    ```sh

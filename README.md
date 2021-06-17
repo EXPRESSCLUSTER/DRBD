@@ -7,6 +7,8 @@ with EXPRESSCLUSTER.
 - 1:1 Replication
   - CentOS
     - [English](doc/2-node-cluster.md)
+  - Ubuntu
+    - [English](doc/2-node-cluster-ubuntu_EN.md)
 ### 3-node Cluster
 - 1:2 Replication
   - Red Hat

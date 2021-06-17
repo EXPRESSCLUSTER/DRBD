@@ -252,10 +252,13 @@ On both nodes which to be the cluster, do as follows.
        #***********************************************
 
        echo "genw-drbd-service: monitor"
-       systemctl status drbd
-       result=$?
-       echo "exit status: $result"
-       exit $result
+       result=`systemctl status drbd`
+       status=`echo "$result" | grep Active: | awk '{print $2}'`
+       if [ $status != "active" -a $status != "activating" ]; then
+           echo "exit status: $result"
+           exit $result
+       fi
+       exit 0
        ```
    - Recovery Action
      - Recovery action: Custom setting

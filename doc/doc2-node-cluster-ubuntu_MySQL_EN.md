@@ -29,7 +29,7 @@ The data replication is performed in the protocol "C" (synchronous replication) 
   - drbd-utils: 9.26.0
 - EXPRESSCLUSTER X 5.1.0-1
 
-### System Configuration
+### System configuration
 
 ```bat
 <Public LAN>

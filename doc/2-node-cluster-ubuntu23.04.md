@@ -34,27 +34,23 @@ The data replication is performed in the protocol "C" (synchronous replication) 
 - Monitor resources
   - diskw-drbd: Monitors the DRBD device by using the WRITE(FILE) monitoring.
   - genw-drbd: Monitors the status of DRBD.
-  - genw-drbd-connection: Monitors the status of the DRBD connection.
-  - genw-drbd-service: Monitors the status of the DRBD service.
 
 ## Install and configure DRBD
 
-On both nodes which to be the cluster, do as follows.
+On both nodes, do as follows.
 
-1. Prepare block device ( e.g. */dev/sdb1* )
-1. Install software-properties-common.
+1. Prepare block device ( e.g. `/dev/sdb1` ) and mountpoint (`/mnt/drbd1`).
+1. Install required package.
 
     ```sh
     sudo apt-get install drbd-utils
     ```
 
-1. Create the DRBD configuration file.
+1. Configure DRBD configuration file `/etc/drbd.conf`.
+   The two hosts in this example were named *node1* and *node2*
 
-    ```sh
-    sudo vi /etc/drbd.conf
-    ```
-
-   The two hosts in this exmplle will be called *node1* and *node2*
+   NOTE: This configuration includes automatic recovery settings after Split Brain called `after-sb-[0-2]pri` and uses `discard-zero-changes`, `discard-secondary` policy.
+   See man page of drbd.conf(5) for detail.
 
     ```conf
     global { usage-count no; }
@@ -68,6 +64,9 @@ On both nodes which to be the cluster, do as follows.
       net {
         cram-hmac-alg sha1;
         shared-secret "secret";
+        after-sb-0pri discard-zero-changes;
+        after-sb-1pri discard-secondary;
+        after-sb-2pri disconnect;
       }
       on node1 {
         device /dev/drbd1;
@@ -84,62 +83,36 @@ On both nodes which to be the cluster, do as follows.
     }
     ```
 
-1. Initialize the metadata storage and enable the resource.
+1. Initialize DRBD metadata storage and enable the service.
 
    ```sh
+   # Initialize the metadata storage and enable the resource.
    sudo drbdadm create-md ecx_md1
-   ```
 
-1. Enable and start the DRBD service.
-
-   ```sh
+   # Enable and start the DRBD service.
    sudo systemctl enable drbd
    sudo systemctl start drbd
    ```
 
-## Verify DRBD operation
-
-1. (On Node1) Initialize the DRBD resource.
+1. On Node1 initialize the DRBD resource and create a file system on it.
 
    ```sh
+   # Initialize the DRBD resource.
    sudo drbdadm -- --overwrite-data-of-peer primary all
-   ```
 
-1. (On Node1) Create a file system.
-
-   ```sh
+   # Create a file system.
    sudo mkfs.ext4 /dev/drbd1
-   ```
 
-1. (On Node1) Check if read/write is possible.
-
-   ```sh
-   # mkdir /mnt/drbd1
-   # mount /dev/drbd1 /mnt/drbd1
-   # hostname >> /mnt/drbd1/hostnames
-   # cat /mnt/drbd1/hostnames
-   node1
-   # umount /mnt/drbd1
-   ```
-
-1. (On Node2) Check if read/write is possible.
-
-   ```sh
-   # mkdir /mnt/drbd1
-   # mount /dev/drbd1 /mnt/drbd1
-   # hostname >> /mnt/drbd1/hostnames
-   # cat /mnt/drbd1/hostnames
-   node1
-   node2
-   # umount /mnt/drbd1
+   # Demote it secondary
+   sudo drbdadm secondary ecx_md1
    ```
 
 ## Install and configure EXPRESSCLUSTER
 
 1. Install EXPRESSCLUSTER and register licenses.
 1. Configure the NP resolution resource.
-1. Configure the failover group "failover-drbd".
-1. Configure the exec resource "exec-drbd".
+1. Configure the failover group `failover-1`.
+1. Configure the exec resource `exec-drbd`.
 
      - Start script:
 
@@ -149,10 +122,13 @@ On both nodes which to be the cluster, do as follows.
        #*              start.sh               *
        #***************************************
 
-       echo "exec-drbd: start"
+       echo "[D] drbdadm primary ecx_md1"
        drbdadm primary ecx_md1
        result=$?
        echo "exit status: $result"
+       if [ $result != 0 ]; then
+           exit $result
+       fi
        mount /dev/drbd1 /mnt/drbd1
        result=$?
        echo "exit status: $result"
@@ -167,15 +143,46 @@ On both nodes which to be the cluster, do as follows.
        #*               stop.sh               *
        #***************************************
 
-       echo "exec-drbd: stop"
+       echo "[D] umount /mnt/drbd1"
        umount /mnt/drbd1
        result=$?
        echo "exit status: $result"
+       if [ $result != 0 ]; then
+           exit $result
+       fi
+       echo "[D] drbdadm secondary ecx_md1"
        drbdadm secondary ecx_md1
        result=$?
        echo "exit status: $result"
        exit $result
        ```
+
+1. Configure a custom monitor resource `genw-drbd`.
+
+   - Monitor(common)
+     - Monitor Timing: Active (Target resource: exec-drbd)
+   - Monitor(special)
+     - Log Output Path: `/opt/nec/clusterpro/log/genw-drbd.log`
+     - Rotate Log: check
+     - Monitor script:
+
+       ```sh
+       #! /bin/sh
+       #***********************************************
+       #*                   genw.sh                   *
+       #***********************************************
+       res=ecx_md1
+       drbdadm role $res | grep '^Primary'
+       if [ $? -ne 0 ]; then
+           echo "[E] [$res] is Not Primary"
+           exit 1
+       fi
+       ```
+
+   - Recovery Action
+     - Recovery Action: Execute only the final action
+     - Recovery Target: LocalServer
+     - Final Action: Stop the cluster service and reboot OS
 
 1. Configure the disk monitor resource "diskw-drbd".
    - Monitor(common)
@@ -186,99 +193,7 @@ On both nodes which to be the cluster, do as follows.
    - Recovery Action
      - Recovery Action: Restart the recovery target, and if there is no effect with restart, then failover
      - Recovery Target: failover-drbd
-1. Configure the custom monitor resource "genw-drbd".
-   - Monitor(common)
-     - Monitor Timing: Active (Target resource: exec-drbd)
-   - Monitor(special)
-     - Monitor script:
 
-       ```sh
-       #! /bin/sh
-       #***********************************************
-       #*                   genw.sh                   *
-       #***********************************************
-
-       echo "genw-drbd: monitor"
-
-       role=`drbdadm role ecx_md1`
-       echo "role: $role"
-       if [ $role != "Primary" ]; then
-           exit 1
-       fi
-
-       df /mnt/drbd1 | grep /mnt/drbd1
-       mstate=$?
-       echo "mount status: $mstate"
-       exit $mstate
-       ```
-
-   - Recovery Action
-     - Recovery Action: Restart the recovery target, and if there is no effect with restart, then failover
-     - Recovery Target: failover-drbd
-1. Configure the custom monitor resource "genw-drbd-connection".
-   - Monitor(common)
-     - Monitor Timing: Active (Target resource: exec-drbd)
-   - Monitor(special)
-     - Monitor script:
-
-       ```sh
-       #! /bin/sh
-       #***********************************************
-       #*                   genw.sh                   *
-       #***********************************************
-
-       drbdadm cstate ecx_md1 | grep Connected
-       if [ $? -ne 0 ]; then
-           echo "Not connected"
-           exit 1
-       fi
-       ```
-
-   - Recovery Action
-     - Recovery Action: Execute only the final action
-     - Recovery Target: LocalServer
-     - Final Action: No operation
-1. Configure the custom monitor resource "genw-drbd-service".
-   - Monitor(common)
-     - Monitor Timing: Always
-   - Monitor(special)
-     - Monitor script:
-
-       ```sh
-       #! /bin/sh
-       #***********************************************
-       #*                   genw.sh                   *
-       #***********************************************
-
-       echo "genw-drbd-service: monitor"
-       result=`systemctl status drbd`
-       status=`echo "$result" | grep Active: | awk '{print $2}'`
-       if [ $status != "active" -a $status != "activating" ]; then
-           echo "exit status: $result"
-           exit $result
-       fi
-       exit 0
-       ```
-
-   - Recovery Action
-     - Recovery action: Custom setting
-     - Recovery Target: LocalServer
-     - Recovery Script Execution Count: 1
-     - Recovery script:
-
-       ```sh
-       #! /bin/sh
-       #***********************************************
-       #*           preaction.sh                      *
-       #***********************************************
-
-       systemctl restart drbd
-       result=$?
-       echo "exit status: $result"
-       exit $result
-       ```
-
-     - Final Action: Stop the cluster service and reboot OS
 1. Apply the cluster configuration.
 
 ## Maintenance
@@ -325,7 +240,9 @@ These commands will discard the data changes on that node and start synchronizat
 
 On the surviving node (the one that will keep its data), execute the following command to start synchronization:
 
+```bash
 drbdadm connect [resource]
+```
 
 These commands are used after DRBD detects a split-brain to manually intervene and discard changes on one node while resynchronizing with the other. When a split-brain occurs, DRBD immediately disconnects, and one node will always be in a ‘StandAlone’ state. Recovery is then done manually using the commands mentioned above.
 

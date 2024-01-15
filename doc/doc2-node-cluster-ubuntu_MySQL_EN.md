@@ -7,12 +7,12 @@ May refer to [this site](https://www.nec.com/expresscluster) for details of ECX 
 
 ---
 
-### Configuration
+## Configuration
 
 In the Data Mirroring configuration, the data is replicated between Node1 & Node2.
 The data replication is performed in the protocol "C" (synchronous replication) of DRBD. the protocol "A" can be chosen when asynchronous replication is required.
 
-```
+```text
  [ Node1 ]                   [ Node2 ]
      ^                         ^
      |                         |
@@ -20,7 +20,7 @@ The data replication is performed in the protocol "C" (synchronous replication) 
       (Replication: Protocol C)
 ```
 
-### Software versions
+## Software versions
 
 - Ubuntu 20.04
 - Watchdog 5.15-2
@@ -29,7 +29,7 @@ The data replication is performed in the protocol "C" (synchronous replication) 
   - drbd-utils: 9.26.0
 - EXPRESSCLUSTER X 5.1.0-1
 
-### System configuration
+## System configuration
 
 ```bat
 <Public LAN>
@@ -61,7 +61,7 @@ The data replication is performed in the protocol "C" (synchronous replication) 
  :
 ```
 
-### Cluster configuration
+## Cluster configuration
 
 - NP setting is mandatory
 - Group resource
@@ -74,48 +74,52 @@ The data replication is performed in the protocol "C" (synchronous replication) 
   - genw-drbd-service: Monitors the status of the DRBD service.
   - genw-mysql-service: Monitors the status of MySQL service.
 
-
-### Install and configure DRBD
-
-On both nodes which to be the cluster, do as follows.
+## Install and configure DRBD
 
 1. Prepare block device ( e.g. */dev/sdc* )
-1. Install software-properties-common.
+1. Install software-properties-common, watchdog.
+
     ```sh
-    sudo apt-get install software-properties-common
+    sudo apt install software-properties-common watchdog
     ```
+
 1. Add LINBIT repository.
+
     ```sh
     sudo add-apt-repository ppa:linbit/linbit-drbd9-stack
     ```
-    - If you have a proxy server, run the following command.
-      ```sh
-      sudo https_proxy=<your proxy server address> add-apt-repository ppa:linbit/linbit-drbd9-stack
-      ```
+
 1. Update the repository.
+
     ```sh
     sudo apt update
-    ```     
+    ```
+
 1. Install DRBD.
+
     ```sh
     sudo apt install drbd-utils drbd-dkms
     ```
+
 1. Confirm that the packages was installed.
+
     ```sh
     sudo dpkg -l |grep drbd
     ii  drbd-dkms                            9.2.5-1ppa1~focal1               all          RAID 1 over TCP/IP for Linux module source
     ii  drbd-utils                           9.26.0-1ppa1~focal1              amd64        RAID 1 over TCP/IP for Linux (user utilities)
     ```
+
 1. Create the DRBD resource file (On Node 1 & Node 2).
-   ```sh
-   # vi /etc/drbd.d/ecx_md1.res
-   ```
+
+    ```sh
+    # vi /etc/drbd.d/ecx_md1.res
+    ```
+
    The following is an example configuration.  
    Replace (Node1) and (Node2) with the hostname of each node.  
    Replace (Address1) and (Address2) with the IP address of each node
 
-    ```
-    
+    ```res
     resource ecx_md1 {
       device /dev/drbd1;
       disk /dev/sdb1;
@@ -132,16 +136,21 @@ On both nodes which to be the cluster, do as follows.
       connection {
               net {
                       protocol C;
+
+                      ## Uncomment followings enables automatic recovery after split-brain
+                      # after-sb-0pri discard-zero-changes;
+                      # after-sb-1pri discard-secondary;
+                      # after-sb-2pri disconnect;
               }
               host (Node1) port 7710;
               host (Node2) port 7711;
       }
     }
     ```
-    For Example:-
-   
-     ```
-    
+
+    For Example:
+
+    ```res
     resource ecx_md1 {
       device /dev/drbd1;
       disk /dev/sdc;
@@ -164,32 +173,39 @@ On both nodes which to be the cluster, do as follows.
       }
     }
     ```
-1. Initialize the metadata storage and enable the resource. 
+
+1. Initialize the metadata storage and enable the resource.
+
    ```sh
    # drbdadm create-md ecx_md1
    # drbdadm up ecx_md1
    ```
 
-
 1. Enable and start the DRBD service.
+
    ```sh
    # systemctl enable drbd
    # systemctl start drbd
    ```
-   if the enable command doesn't work, please refer to [this section](#Workaround-for-systemctl-enable-drbd-error).
+
+   if the enable command doesn't work, please refer to [this section](#workaround-for-systemctl-enable-drbd-error).
 
 ### Verify DRBD operation
 
 1. (On Node1) Initialize the DRBD resource.
+
    ```sh
    # drbdadm primary --force ecx_md1
    ```
 
 1. (On Node1) Create a file system.
+
    ```sh
    # mkfs.xfs -f /dev/drbd1
    ```
+
 1. (On Node1) Check if read/write is possible.
+
    ```sh
    # mkdir /mnt/drbd1
    # mount /dev/drbd1 /mnt/drbd1
@@ -200,6 +216,7 @@ On both nodes which to be the cluster, do as follows.
    ```
 
 1. (On Node2) Check if read/write is possible.
+
    ```sh
    # mkdir /mnt/drbd1
    # mount /dev/drbd1 /mnt/drbd1
@@ -209,29 +226,24 @@ On both nodes which to be the cluster, do as follows.
    (Node2)
    # umount /mnt/drbd1
    ```
+
    **Note** : Expecting *auto-promote* option is enabled by default. DRBD resource is automatically promoted to primary on mount and demoted to secondary on umount.
 
-
-### Install Watchdog 
-
-1. Install Watchdog on Ubuntu (On Node 1 & Node 2).
-    ```sh
-    sudo apt update
-    sudo apt install watchdog
-    ```
-
-
-### Install and configure EXPRESSCLUSTER
+## Install and configure EXPRESSCLUSTER
 
 1. Install EXPRESSCLUSTER and register licenses.
     - Install ECX on both nodes.
-      ```
+
+      ```sh
       dpkg -i expresscls-5.1.0-1.amd64.deb
       ```
+
     - Configure ECX licenses on both nodes.
-      ```
+
+      ```sh
       clplcnsc -i base5x_lin_trial_cpulcns.key
       ```
+
       Reboot both the Nodes (Node 1 & Node 2).
 
       For more info regarding Expresscluster Installation and Configuration on Linux [here](https://docs.nec.co.jp/sites/default/files/minisite/static/c2b4a6e8-4af9-426c-ac10-ada1c8d87732/ecx_x51_linux_en/L51_IG_EN/index.html)
@@ -246,6 +258,7 @@ On both nodes which to be the cluster, do as follows.
 1. Configure the exec resource "exec-drbd".
    - Details
      - Start script:
+
        ```sh
        #! /bin/sh
        #***************************************
@@ -258,7 +271,9 @@ On both nodes which to be the cluster, do as follows.
        echo "exit status: $result"
        exit $result
        ```
+
      - Stop script:
+
        ```sh
        #! /bin/sh
        #***************************************
@@ -271,9 +286,11 @@ On both nodes which to be the cluster, do as follows.
        echo "exit status: $result"
        exit $result
        ```
+
 1. Configure the exec resource "exec-mysql".
    - Details
      - Start script:
+
        ```sh
        #! /bin/sh
        #***************************************
@@ -282,7 +299,9 @@ On both nodes which to be the cluster, do as follows.
        
        Sudo systemctl start mysql.service
        ```
+
      - Stop script:
+
        ```sh
        #! /bin/sh
        #***************************************
@@ -291,6 +310,7 @@ On both nodes which to be the cluster, do as follows.
        
        Sudo systemctl stop mysql.service
        ```
+
 1. Configure the disk monitor resource "diskw-drbd".
    - Monitor(common)
      - Monitor Timing: Active (Target resource: exec-drbd)
@@ -305,6 +325,7 @@ On both nodes which to be the cluster, do as follows.
      - Monitor Timing: Active (Target resource: exec-drbd)
    - Monitor(special)
      - Monitor script:
+
        ```sh
        #! /bin/sh
        #***********************************************
@@ -324,6 +345,7 @@ On both nodes which to be the cluster, do as follows.
        echo "mount status: $mstate"
        exit $mstate
        ```
+
    - Recovery Action
      - Recovery Action: Restart the recovery target, and if there is no effect with restart, then failover
      - Recovery Target: failover-drbd
@@ -332,6 +354,7 @@ On both nodes which to be the cluster, do as follows.
      - Monitor Timing: Active (Target resource: exec-drbd)
    - Monitor(special)
      - Monitor script:
+
        ```sh
        #! /bin/sh
        #***********************************************
@@ -344,6 +367,7 @@ On both nodes which to be the cluster, do as follows.
            exit 1
        fi
        ```
+
    - Recovery Action
      - Recovery Action: Execute only the final action
      - Recovery Target: LocalServer
@@ -353,6 +377,7 @@ On both nodes which to be the cluster, do as follows.
      - Monitor Timing: Always
    - Monitor(special)
      - Monitor script:
+
        ```sh
        #! /bin/sh
        #***********************************************
@@ -368,15 +393,17 @@ On both nodes which to be the cluster, do as follows.
        fi
        exit 0
        ```
+
    - Recovery Action
      - Recovery Action: Custom setting
      - Recovery Target: LocalServer
      - Recovery Script Execution Count: 1
      - Recovery script:
+
        ```sh
        #! /bin/sh
        #***********************************************
-       #*	          preaction.sh                 *
+       #*                preaction.sh                 *
        #***********************************************
 
        systemctl restart drbd
@@ -384,15 +411,15 @@ On both nodes which to be the cluster, do as follows.
        echo "exit status: $result"
        exit $result
        ```
-     - Final Action: Stop the cluster service and reboot OS
 
+     - Final Action: Stop the cluster service and reboot OS
 
 1. Configure the custom monitor resource "genw-mysql".
    - Monitor(common)
      - Monitor Timing: Active (Target resource: exec-mysql)
    - Monitor(special)
      - Monitor script:
-      
+
        ```sh
        #! /bin/sh
        #***********************************************
@@ -410,15 +437,17 @@ On both nodes which to be the cluster, do as follows.
        exit 1
        fi
        ```
+
    - Recovery Action
      - Recovery Action: Custom setting
      - Recovery Target: LocalServer
      - Recovery Script Execution Count: 1
      - Recovery script:
+
        ```sh
        #! /bin/sh
        #***********************************************
-       #*	          preaction.sh                 *
+       #*                preaction.sh                 *
        #***********************************************
 
        systemctl restart mysql.service
@@ -426,28 +455,29 @@ On both nodes which to be the cluster, do as follows.
        echo "exit status: $result"
        exit $result
        ```
+
      - Final Action: Stop the cluster service and reboot OS
 
 1. Apply the cluster configuration.
-1. Testing Scenario for MySQL 
+1. Testing Scenario for MySQL
 
-  - On Node1
-    - Create database 
+   - On Node1
+     - Create database
          - mysql -u root -p
             - log in to root
          - CREATE DATABASE db_test;
             - Create database named db_test.
-                
-    - Create user and password for executing database. 
+
+     - Create user and password for executing database.
          - CREATE USER 'test_user'@'localhost' IDENTIFIED BY 'aaaaaa';
 
-    - Grant permissions.
+     - Grant permissions.
          - GRANT ALL PRIVILEGES ON db_test.* TO 'test_user'@'localhost';
 
-    - Apply the Configuration file.
+     - Apply the Configuration file.
          - FLUSH PRIVILEGES;
 
-    - Create database
+     - Create database
          - mysql -u test_user -p
             - Log in to test_user.
          - use db_test
@@ -467,18 +497,18 @@ On both nodes which to be the cluster, do as follows.
               |1|Uchiha|
               |2|Sasuke|
 
-     You have to move failover group on the Node2. Configure MySQL on the Node2.
+      You have to move failover group on the Node2. Configure MySQL on the Node2.
 
-  - On Node2
+   - On Node2
 
-    - Configure the root account
+     - Configure the root account
         - mysql_secure_installation
-      
-    - Confirm the database
+
+     - Confirm the database
          - mysql -u test_user -p
               - Log in to "test_user"
          - use db_test
-              - Specify 
+              - Specify
          - select * from user;
             - Confirm the database.
 
@@ -487,35 +517,41 @@ On both nodes which to be the cluster, do as follows.
               |1|Uchiha|
               |2|Sasuke|
 
-### Maintenance information
+## Maintenance information
 
 In case that "systemctl enable drbd" is showing error status, drbd mirroring is being interrupted for any reason.
 Depending on the result of "drbdadm cstate (drbd resource name)", take the following actions.
 
 - Status: **Connecting**
-   - The server is unable to communicate with another server.
-   - After communication is restoerd, differential copy will run automatically.
+  - The server is unable to communicate with another server.
+  - After communication is restoerd, differential copy will run automatically.
 - Status: **StandAlone** or **WFConnection**
-   - Regardless of the success or failure of the communication with another server, there is inconsistency in the data between both servers.
-   - You need to specify manually which one has the most recent data.
-   1. Move a failover group to see which one has the most recent data.
-   1. Keep a failover group running on the server that has the most recent data.
-   1. Execute following commands on ECX **secondary** server.
+  - Regardless of the success or failure of the communication with another server, there is inconsistency in the data between both servers.
+  - You need to specify manually which one has the most recent data.
+
+  1. Move a failover group to see which one has the most recent data.
+  1. Keep a failover group running on the server that has the most recent data.
+  1. Execute following commands on ECX **secondary** server.
+
       ```sh
       # drbdadm disconnect <drbd resource name>
       # drbdadm secondary <drbd resource name>
       # drbdadm connect --discard-my-data <drbd resource name>
       ```
-   1. Execute following commands on ECX **secondary** server.
+
+  1. Execute following commands on ECX **primary** server.
+
       ```sh
       # drbdadm disconnect <drbd resource name>
       # drbdadm connect <drbd resource name>
       ```
-   1. Full copy is executed from primary to secondary.z
 
-### [Workaround for "systemctl enable drbd" error](#Workaround-for-systemctl-enable-drbd-error)
+  1. Full copy is executed from primary to secondary.
+
+## [Workaround for "systemctl enable drbd" error](#workaround-for-systemctl-enable-drbd-error)
 
 Depending DRBD version, you may face this error after "systemctl enable drbd".
+
   ```sh
   root@ubuntu2004-1:~# uname -rv
   5.4.0-26-generic #30-Ubuntu SMP Mon Apr 20 16:58:30 UTC 2020
@@ -530,16 +566,22 @@ Depending DRBD version, you may face this error after "systemctl enable drbd".
   ```
 
 In that case, please follow the workaround below.
+
 1. Edit /etc/init.d/drbd
    - Before:
+
       ```sh
       # Default-Start:
       ```
+
    - After:
+
       ```sh
       # Default-Start:  2 3 4 5
       ```
+
 1. Execute following commands
+
     ```sh
     # cd /etc/rc2.d
     # ln -s ../init.d/drbd S01drbd
@@ -551,8 +593,9 @@ In that case, please follow the workaround below.
     # ln -s ../init.d/drbd S01drbd
     # update-rc.d drbd enable 2 3 4 5
     ```
+
 1. Execute "systemctl enable drbd"
 
-### Reference
+## Reference
 
-- The DRBD9 User's Guide: https://docs.linbit.com/docs/users-guide-9.0/
+- The DRBD9 User's Guide: <https://docs.linbit.com/docs/users-guide-9.0/>

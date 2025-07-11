@@ -103,6 +103,9 @@ On both nodes, do as follows.
    # Create a file system.
    sudo mkfs.ext4 /dev/drbd1
 
+   # Prepare mount point
+   sudo mkdir /tmp/drbd1
+
    # Demote it secondary
    sudo drbdadm secondary ecx_md1
    ```

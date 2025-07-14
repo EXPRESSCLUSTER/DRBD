@@ -115,7 +115,7 @@ On both nodes, do as follows.
 1. Install EXPRESSCLUSTER and register licenses.
 1. Configure the NP resolution resource.
 1. Configure the failover group `failover-1`.
-1. Configure the exec resource `exec-drbd`.
+1. Configure the *Exec resource* `exec-drbd`.
 
      - Start script:
 
@@ -160,7 +160,7 @@ On both nodes, do as follows.
        exit $result
        ```
 
-1. Configure a custom monitor resource `genw-drbd`.
+1. Configure the *Custom monitor* resource `genw-drbd`.
 
    - Monitor(common)
      - Monitor Timing: Active (Target resource: exec-drbd)
@@ -187,7 +187,7 @@ On both nodes, do as follows.
      - Recovery Target: LocalServer
      - Final Action: Stop the cluster service and reboot OS
 
-1. Configure the disk monitor resource "diskw-drbd".
+1. Configure the *Disk monitor* resource "diskw-drbd".
    - Monitor(common)
      - Monitor Timing: Active (Target resource: exec-drbd)
    - Monitor(special)
